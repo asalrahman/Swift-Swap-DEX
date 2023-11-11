@@ -1,0 +1,11 @@
+{
+  "name": "freetoken",
+  "version": "1.0.0",
+  "main": "index.js",
+  "description": "Earn free crypto by completing challenges ,stake FRZ and eran,refer&earn etc",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "hardhat": "^2.19.0"
+  }
+}
