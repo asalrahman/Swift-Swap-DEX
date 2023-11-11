@@ -18,6 +18,8 @@ error Swp__AmountMustBeMoreThanZero();
 //mappings
 
 mapping (address user => uint256 token) public s_UserToAmountMined;
+mapping (address user => uint256 token) public s_UserToRewardMined;
+
 
 
     constructor() ERC20("SwiftSwap", "Swp"){
@@ -39,12 +41,25 @@ mapping (address user => uint256 token) public s_UserToAmountMined;
     }
 
 
-
-    function reward(address)
-
 //burn token
 function burn(uint256 _amount) private onlyOwner {
     _burn(msg.sender, _amount);
     }
+
+
+ // rewards
+     function reward(address _recipient,uint256 _amount)public onlyOwner{
+        if(_recipient == address(0)){
+        revert Swp_NotZeroAccount();
+    }
+    if(_amount <=0){
+   revert Swp__AmountMustBeMoreThanZero();
+    }
+
+    s_UserToRewardMined[_recipient] += _amount;
+    _mint(_recipient, _amount);
+
+    
+    }   
 }
 

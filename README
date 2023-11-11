@@ -1,4 +1,5 @@
-#creating a deccentralized exchange 
+
+Swift-Swap is a decentralized exchange (DEX) built on the Ethereum blockchain
 
 features :-  swap(eth to token,token to eth ,token to token)
              stake(stake FRT and eran )
