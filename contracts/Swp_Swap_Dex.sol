@@ -1,24 +1,24 @@
-// SPDX-License-Identifier: SEE LICENSE IN LICENSE
-pragma solidity ^0.8.7;
+// // SPDX-License-Identifier: SEE LICENSE IN LICENSE
+// pragma solidity ^0.8.7;
 
 
-import{SwpToken} from "./Swp.sol";
+// import{SwpToken} from "./Swp.sol";
 
-/*
-swap contract
+// /*
+// swap contract
 
--ethTotoke
--tokenToeth
--tokenTotoken
-*/
-contract Swp_Swap_Dex is Swp{
+// -ethTotoke
+// -tokenToeth
+// -tokenTotoken
+// */
+// contract Swp_Swap_Dex is Swp{
 
 
 
-function EthToToken() payable public{}
+// function EthToToken() payable public{}
 
-function TokenToEth()payable public{}
+// function TokenToEth()payable public{}
 
-function TokenToToken()payable public{}
+// function TokenToToken()payable public{}
 
-}
+// }
