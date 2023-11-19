@@ -9,16 +9,15 @@ import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import '@uniswap/v3-periphery/contracts/base/LiquidityManagement.sol';
+import 'hardhat/console.sol';
 
 contract Swp_Liquity_Protocol is IERC721Receiver {
     address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
-    uint24 public constant poolFee = 3000;
+    uint24 public constant poolFee = 300;
 
-    INonfungiblePositionManager public immutable nonfungiblePositionManager;
+    INonfungiblePositionManager public nonfungiblePositionManager = INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
 
-    /// @notice Represents the deposit of an NFT
     struct Deposit {
         address owner;
         uint128 liquidity;
@@ -26,45 +25,35 @@ contract Swp_Liquity_Protocol is IERC721Receiver {
         address token1;
     }
 
-    /// @dev deposits[tokenId] => Deposit
     mapping(uint256 => Deposit) public deposits;
 
-    constructor(
-        INonfungiblePositionManager _nonfungiblePositionManager
-    ) {
-        nonfungiblePositionManager = _nonfungiblePositionManager;
-    }
-
-    // Implementing `onERC721Received` so this contract can receive custody of erc721 tokens
     function onERC721Received(
         address operator,
         address,
         uint256 tokenId,
         bytes calldata
     ) external override returns (bytes4) {
-        // get position information
-
-        _createDeposit(operator, tokenId);
-
+        _createDeposit(operator, tokenId, 0, address(0), address(0));
         return this.onERC721Received.selector;
     }
 
-    function _createDeposit(address owner, uint256 tokenId) internal {
-        (, , address token0, address token1, , , , uint128 liquidity, , , , ) =
-            nonfungiblePositionManager.positions(tokenId);
-
-        // set the owner and data for position
-        // operator is msg.sender
+    function _createDeposit(
+        address owner,
+        uint256 tokenId,
+        uint128 liquidity,
+        address token0,
+        address token1
+    ) internal {
         deposits[tokenId] = Deposit({owner: owner, liquidity: liquidity, token0: token0, token1: token1});
+        console.log("tokenId", tokenId);
+        console.log("Liquidity", liquidity);
     }
 
-    /// @notice Calls the mint function defined in periphery, mints the same amount of each token.
-    /// For this example we are providing 1000 DAI and 1000 USDC in liquidity
-    /// @return tokenId The id of the newly minted ERC721
-    /// @return liquidity The amount of liquidity for the position
-    /// @return amount0 The amount of token0
-    /// @return amount1 The amount of token1
-    function mintNewPosition()
+    function mintNewPosition(
+        address token0, // Assuming this is the first token
+        uint256 amount0ToMint,
+        uint256 amount1ToMint
+    )
         external
         returns (
             uint256 tokenId,
@@ -73,23 +62,19 @@ contract Swp_Liquity_Protocol is IERC721Receiver {
             uint256 amount1
         )
     {
-        // For this example, we will provide equal amounts of liquidity in both assets.
-        // Providing liquidity in both assets means liquidity will be earning fees and is considered in-range.
-        uint256 amount0ToMint = 1000;
-        uint256 amount1ToMint = 1000;
-
-        // transfer tokens to contract
-        TransferHelper.safeTransferFrom(DAI, msg.sender, address(this), amount0ToMint);
-        TransferHelper.safeTransferFrom(USDC, msg.sender, address(this), amount1ToMint);
+        // Transfer tokens to contract
+        TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0ToMint);
+        TransferHelper.safeTransferFrom(DAI, msg.sender, address(this), amount1ToMint); // DAI is the second token
 
         // Approve the position manager
-        TransferHelper.safeApprove(DAI, address(nonfungiblePositionManager), amount0ToMint);
-        TransferHelper.safeApprove(USDC, address(nonfungiblePositionManager), amount1ToMint);
+        TransferHelper.safeApprove(token0, address(nonfungiblePositionManager), amount0ToMint);
+        TransferHelper.safeApprove(DAI, address(nonfungiblePositionManager), amount1ToMint);
 
+        // Define MintParams
         INonfungiblePositionManager.MintParams memory params =
             INonfungiblePositionManager.MintParams({
-                token0: DAI,
-                token1: USDC,
+                token0: token0,
+                token1: DAI, // DAI is the second token
                 fee: poolFee,
                 tickLower: TickMath.MIN_TICK,
                 tickUpper: TickMath.MAX_TICK,
@@ -101,23 +86,23 @@ contract Swp_Liquity_Protocol is IERC721Receiver {
                 deadline: block.timestamp
             });
 
-        // Note that the pool defined by DAI/USDC and fee tier 0.3% must already be created and initialized in order to mint
+        // Mint position
         (tokenId, liquidity, amount0, amount1) = nonfungiblePositionManager.mint(params);
 
         // Create a deposit
-        _createDeposit(msg.sender, tokenId);
+        _createDeposit(msg.sender, tokenId, liquidity, token0, DAI);
 
-        // Remove allowance and refund in both assets.
+        // Remove allowance and refund in both assets
         if (amount0 < amount0ToMint) {
-            TransferHelper.safeApprove(DAI, address(nonfungiblePositionManager), 0);
+            TransferHelper.safeApprove(token0, address(nonfungiblePositionManager), 0);
             uint256 refund0 = amount0ToMint - amount0;
-            TransferHelper.safeTransfer(DAI, msg.sender, refund0);
+            TransferHelper.safeTransfer(token0, msg.sender, refund0);
         }
 
         if (amount1 < amount1ToMint) {
-            TransferHelper.safeApprove(USDC, address(nonfungiblePositionManager), 0);
+            TransferHelper.safeApprove(DAI, address(nonfungiblePositionManager), 0);
             uint256 refund1 = amount1ToMint - amount1;
-            TransferHelper.safeTransfer(USDC, msg.sender, refund1);
+            TransferHelper.safeTransfer(DAI, msg.sender, refund1);
         }
     }
 

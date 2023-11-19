@@ -15,7 +15,7 @@ contract Swp is ERC20, Ownable {
     mapping(address => uint256) public s_UserToAmountMined;
     mapping(address => uint256) public s_UserToRewardMined;
 
-    constructor() public ERC20("SwiftSwap", "Swp") {
+    constructor()  ERC20("SwiftSwap", "Swp") {
         _mint(msg.sender, 1000000 * 10 ** 18);
     }
 
